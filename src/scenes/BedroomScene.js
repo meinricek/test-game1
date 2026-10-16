@@ -11,18 +11,45 @@ const WIN = { x0: 0, x1: 1.2, y0: 0.9, y1: 2.0 };
 const DOOR = { x0: -0.15, x1: 0.75, h: 2.05 };
 
 export class BedroomScene extends BaseScene {
+  // Externí CC0 assety (public/models, public/textures), načtou se před build().
+  static assets = {
+    models: [
+      'bedSingle', 'cabinetBedDrawerTable', 'lampRoundTable', 'desk', 'chairDesk', 'computerKeyboard',
+      'computerMouse', 'computerScreen', 'books', 'pottedPlant', 'plantSmall1', 'trashcan',
+      'cardboardBoxOpen', 'speakerSmall',
+    ],
+    textures: {
+      wall: 'decrepit_wallpaper',
+      floor: 'laminate_floor_02',
+      ceiling: 'beige_wall_001',
+      wood: 'dark_wood',
+      blanket: 'fabric_pattern_07',
+      sheet: 'cotton_jersey',
+      carpet: 'dirty_carpet',
+      curtain: 'velour_velvet',
+    },
+    normals: ['decrepit_wallpaper', 'laminate_floor_02', 'dark_wood', 'dirty_carpet'],
+  };
+
   build() {
     const s = this.root;
     s.background = new THREE.Color(0x020306);
     s.fog = new THREE.FogExp2(0x05070b, 0.032);
 
     this.m = {
-      wall: this.mat({ map: Textures.wallpaper() }),
-      floor: this.mat({ map: Textures.floor() }),
-      ceiling: this.mat({ map: Textures.ceiling() }),
-      wood: this.mat({ map: Textures.wood(1) }),
-      woodDark: this.mat({ map: Textures.wood(0.6) }),
-      woodLight: this.mat({ map: Textures.wood(1.35) }),
+      wall: this.texMat('decrepit_wallpaper', { normal: 0.7 }),
+      floor: this.texMat('laminate_floor_02', { roughness: 0.55, normal: 0.6 }),
+      ceiling: this.texMat('beige_wall_001', { roughness: 0.95 }),
+      wood: this.texMat('dark_wood', { roughness: 0.6, normal: 0.5 }),
+      woodDark: this.texMat('dark_wood', { color: 0x7a6a5c, roughness: 0.6, normal: 0.5 }),
+      woodLight: this.texMat('dark_wood', { color: 0xf0dcc4, roughness: 0.6, normal: 0.5 }),
+      blanket: this.texMat('fabric_pattern_07', { roughness: 0.95, color: 0xd0c8c8 }),
+      sheet: this.texMat('cotton_jersey', { roughness: 0.95, color: 0xe8e4dc }),
+      curtain: this.texMat('velour_velvet', { roughness: 0.9, color: 0x9a7070 }),
+      carpet: this.texMat('dirty_carpet', { roughness: 1, color: 0xc8a090, normal: 0.7 }),
+      darkPlastic: this.mat({ color: 0x1c1d20, roughness: 0.5 }),
+      greyMetal: this.mat({ color: 0x6d7276, roughness: 0.45, metalness: 0.5 }),
+      plant: this.mat({ color: 0x2f4a2a, roughness: 0.8 }),
       white: this.mat({ color: 0xc8c6bc }),
       trim: this.mat({ color: 0xb9b5a8 }),
       black: this.mat({ color: 0x151517 }),
@@ -44,9 +71,9 @@ export class BedroomScene extends BaseScene {
   // ---------------------------------------------------------------- místnost
   buildRoom() {
     const { wall, floor, ceiling, woodDark } = this.m;
-    this.plane(W, D, floor, { rx: -90, uv: 1, segX: 8, segY: 10, castShadow: false });
-    this.plane(W, D, ceiling, { rx: 90, y: H, uv: 1 });
-    const wallOpt = (o) => ({ uv: 1, ...o });
+    this.plane(W, D, floor, { rx: -90, uv: 0.6, segX: 8, segY: 10, castShadow: false });
+    this.plane(W, D, ceiling, { rx: 90, y: H, uv: 0.5 });
+    const wallOpt = (o) => ({ uv: 0.7, ...o });
 
     // západ + východ
     this.plane(D, H, wall, wallOpt({ x: -W / 2, y: H / 2, ry: 90 }));
@@ -114,7 +141,7 @@ export class BedroomScene extends BaseScene {
     });
 
     // záclony + tyč
-    const curtain = this.mat({ map: Textures.fabric('#4b2326', 3) });
+    const curtain = this.m.curtain;
     this.box(0.36, 1.6, 0.05, curtain, { x: WIN.x0 - 0.2, y: 0.72, z: -D / 2 + 0.08, uv: 2 });
     this.box(0.36, 1.6, 0.05, curtain, { x: WIN.x1 + 0.2, y: 0.72, z: -D / 2 + 0.08, uv: 2 });
     this.cyl(0.012, 0.012, 1.9, this.m.metal, { x: 0.6, y: 2.36, z: -D / 2 + 0.08, rz: 90, castShadow: false, occlude: false });
@@ -129,11 +156,8 @@ export class BedroomScene extends BaseScene {
     this.root.add(look);
     this.register('windowLook', look);
 
-    // květináč na parapetu
-    const pot = this.mat({ color: 0x8a4a2e });
-    this.cyl(0.06, 0.045, 0.1, pot, { x: 0.18, y: WIN.y0, z: -D / 2 + 0.07, occlude: false });
-    const leaf = this.mat({ color: 0x2f4a26 });
-    this.sphere(0.08, leaf, { x: 0.18, y: WIN.y0 + 0.17, z: -D / 2 + 0.07, scale: [1, 1.3, 1], sides: 5, rings: 4, occlude: false });
+    // kytka na parapetu (Kenney)
+    this.model('plantSmall1', { fit: { h: 0.24 }, x: 0.2, y: WIN.y0, z: -D / 2 + 0.08, materials: this.kenney(), occlude: false });
   }
 
   // ---------------------------------------------------------------- dveře + chodba
@@ -158,7 +182,7 @@ export class BedroomScene extends BaseScene {
     this.addCollider(DOOR.x0, DOOR.x1, zS - 0.05, zS + 0.1, 'door');
 
     // chodba – box viděný zevnitř
-    const hallMat = this.mat({ map: Textures.wallpaper(), side: THREE.BackSide, color: 0x9a8f80 });
+    const hallMat = this.texMat('decrepit_wallpaper', { side: THREE.BackSide, color: 0x9a8f80 });
     const hall = this.box(4, H, 4, hallMat, { x: 0.3, z: zS + 2.05, uv: 1 });
     hall.castShadow = false;
     // obraz na konci chodby
@@ -168,122 +192,165 @@ export class BedroomScene extends BaseScene {
     this.plane(0.4, 0.55, pic, { x: 0.3, y: 1.575, z: zS + 4.0, ry: 180, segX: 1, segY: 1 });
   }
 
+  /** Mapování materiálů Kenney modelů (ploché barvy) na naše texturované materiály. */
+  kenney(extra = {}) {
+    const m = this.m;
+    return {
+      wood: m.wood,
+      woodDark: m.woodDark,
+      metal: m.greyMetal,
+      metalMedium: m.greyMetal,
+      metalDark: m.darkPlastic,
+      carpet: m.blanket,
+      carpetDarker: m.blanket,
+      carpetWhite: m.sheet,
+      plant: m.plant,
+      _defaultMat: m.greyMetal,
+      ...extra,
+    };
+  }
+
   // ---------------------------------------------------------------- postel + noční stolek
   buildBed() {
-    const { wood, woodDark } = this.m;
-    const g = this.group({ name: 'bed' });
-    const x = 1.45;
-    const z0 = -0.1;
-    const z1 = 1.95;
-    const len = z1 - z0;
-    const zc = (z0 + z1) / 2;
-    const o = { parent: g };
-    this.box(1.0, 0.3, len, wood, { ...o, x, z: zc, uv: 2 });
-    const sheet = this.mat({ map: Textures.fabric('#b7b4aa', 5) });
-    this.box(0.94, 0.2, len - 0.06, sheet, { ...o, x, y: 0.3, z: zc, uv: 3 });
-    const blanket = this.mat({ map: Textures.fabric('#33415c', 7) });
-    this.box(1.0, 0.06, 1.4, blanket, { ...o, x, y: 0.48, z: z1 - 0.75, uv: 3, ry: 1.5 });
-    this.box(0.04, 0.32, 1.4, blanket, { ...o, x: x - 0.51, y: 0.22, z: z1 - 0.75, uv: 3 });
-    const pillow = this.mat({ map: Textures.fabric('#cfcabd', 9) });
-    this.box(0.62, 0.11, 0.34, pillow, { ...o, x: x + 0.03, y: 0.5, z: 0.15, ry: -4, uv: 3 });
-    this.box(0.98, 0.9, 0.06, woodDark, { ...o, x, z: z0 - 0.03, uv: 2 });
-    this.box(0.98, 0.55, 0.05, woodDark, { ...o, x, z: z1 + 0.02, uv: 2 });
-    this.addCollider(x - 0.5, x + 0.55, z0 - 0.06, z1 + 0.05, 'bed');
+    // postel (Kenney bedSingle) – čelo je na -Z, tedy u severní stěny
+    const bed = this.model('bedSingle', { name: 'bed', fit: { d: 2.05 }, x: 1.45, z: 0.93, materials: this.kenney(), uv: 1.4 });
+    this.alignBox(bed, { maxX: W / 2 - 0.02 });
+    this.colliderFromObject(bed, 0, 'bed');
+    const bedBox = new THREE.Box3().setFromObject(bed);
+    const bx = (bedBox.min.x + bedBox.max.x) / 2;
 
     // telefon na posteli (svítící displej)
-    const phone = this.group({ name: 'phone', x: 1.18, y: 0.5, z: 0.48, ry: 25 });
+    const py = this.surfaceY(bed, bx - 0.2, 0.5, 0.5);
+    const phone = this.group({ name: 'phone', x: bx - 0.2, y: py, z: 0.5, ry: 25 });
     this.box(0.075, 0.012, 0.15, this.m.black, { parent: phone, occlude: false });
     this.phoneScreenMat = new THREE.MeshBasicMaterial({ map: Textures.phoneScreen(), color: 0x666666 });
     this.plane(0.065, 0.135, this.phoneScreenMat, { parent: phone, y: 0.0131, rx: -90, segX: 1, segY: 1, castShadow: false, occlude: false });
     const hit = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.12, 0.3), new THREE.MeshBasicMaterial({ visible: false }));
     phone.add(hit);
 
-    // noční stolek
+    // noční stolek (Kenney) – šuplíkem do pokoje
     const ns = { x: 1.72, z: -0.42 };
-    this.box(0.45, 0.55, 0.45, wood, { x: ns.x, z: ns.z, uv: 2, collider: 0.0, name: 'nightstand' });
-    this.box(0.36, 0.14, 0.01, woodDark, { x: ns.x, y: 0.33, z: ns.z + 0.226, rx: 0, ry: 0, occlude: false });
-    this.box(0.36, 0.14, 0.01, woodDark, { x: ns.x - 0.226, y: 0.33, z: ns.z, ry: 90, occlude: false });
+    const stand = this.model('cabinetBedDrawerTable', { name: 'nightstand', fit: { w: 0.48 }, ry: -90, x: ns.x, z: ns.z, materials: this.kenney(), uv: 2 });
+    this.alignBox(stand, { maxX: W / 2 - 0.02, maxZ: bedBox.min.z - 0.03 });
+    this.colliderFromObject(stand, 0, 'nightstand');
+    const sb = new THREE.Box3().setFromObject(stand);
+    ns.x = (sb.min.x + sb.max.x) / 2;
+    ns.z = (sb.min.z + sb.max.z) / 2;
+    const top = this.surfaceY(stand, ns.x, ns.z, 0.55);
+    this.lampPos = new THREE.Vector3(ns.x + 0.04, top, ns.z - 0.04);
 
-    // lampa
-    const lamp = this.group({ name: 'lamp', x: ns.x, y: 0.55, z: ns.z });
-    const brass = this.mat({ color: 0x8c7a4c });
-    this.cyl(0.075, 0.085, 0.03, brass, { parent: lamp, occlude: false });
-    this.cyl(0.012, 0.012, 0.3, brass, { parent: lamp, y: 0.03, occlude: false });
-    this.lampShadeMat = this.mat({ color: 0xd9c49a, emissive: 0xffb060, emissiveIntensity: 0.55, side: THREE.DoubleSide });
-    const shade = this.cyl(0.08, 0.14, 0.17, this.lampShadeMat, { parent: lamp, y: 0.22, open: true, sides: 8, occlude: false });
-    shade.castShadow = false;
+    // lampa (Kenney lampRoundTable) – stínítko svítí
+    const lamp = this.group({ name: 'lamp', x: this.lampPos.x, y: top, z: this.lampPos.z });
+    this.lampShadeMat = this.mat({ color: 0xd9c49a, emissive: 0xffb060, emissiveIntensity: 0.55, side: THREE.DoubleSide, roughness: 0.9 });
+    const brass = this.mat({ color: 0x8c7a4c, roughness: 0.4, metalness: 0.6 });
+    const lampModel = this.model('lampRoundTable', {
+      parent: lamp,
+      fit: { h: 0.46 },
+      materials: { lamp: this.lampShadeMat, metal: brass, default: brass },
+      castShadow: false,
+      occlude: false,
+    });
+    const lb = new THREE.Box3().setFromObject(lampModel);
+    this.lampLightY = lb.min.y + (lb.max.y - lb.min.y) * 0.72;
     this.lampBulbMat = this.basic({ color: 0xfff1cf });
-    const bulb = this.sphere(0.035, this.lampBulbMat, { parent: lamp, y: 0.3, occlude: false });
+    const bulb = this.sphere(0.03, this.lampBulbMat, { parent: lamp, y: this.lampLightY - top, occlude: false });
     bulb.castShadow = false;
-    const lampHit = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.45, 0.32), new THREE.MeshBasicMaterial({ visible: false }));
-    lampHit.position.y = 0.2;
+    const lampHit = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.5, 0.32), new THREE.MeshBasicMaterial({ visible: false }));
+    lampHit.position.y = 0.22;
     lamp.add(lampHit);
 
     // budík
-    this.box(0.12, 0.07, 0.05, this.m.black, { x: ns.x + 0.09, y: 0.55, z: ns.z + 0.12, ry: -20, occlude: false });
+    const cx = ns.x - 0.1;
+    const cz = ns.z + 0.12;
+    this.box(0.12, 0.07, 0.05, this.m.black, { x: cx, y: top, z: cz, ry: -70, occlude: false });
     const digits = this.basic({ color: 0xff3020 });
-    this.plane(0.09, 0.03, digits, { x: ns.x + 0.08, y: 0.588, z: ns.z + 0.147, ry: -20, segX: 1, segY: 1, castShadow: false, occlude: false });
+    this.plane(0.09, 0.03, digits, { x: cx - 0.026, y: top + 0.038, z: cz - 0.01, ry: -70 - 90 + 180, segX: 1, segY: 1, castShadow: false, occlude: false });
   }
 
   // ---------------------------------------------------------------- stůl, PC, židle
   buildDesk() {
-    const { woodLight, plastic, black, metal } = this.m;
-    const x0 = -1.95;
-    const x1 = -1.35;
-    const z0 = -1.9;
-    const z1 = -0.5;
-    const xc = (x0 + x1) / 2;
-    const zc = (z0 + z1) / 2;
-    this.box(x1 - x0, 0.035, z1 - z0, woodLight, { x: xc, y: 0.72, z: zc, uv: 2 });
-    for (const [lx, lz] of [
-      [x0 + 0.03, z1 - 0.03],
-      [x1 - 0.03, z1 - 0.03],
-    ]) {
-      this.box(0.04, 0.72, 0.04, metal, { x: lx, z: lz, occlude: false });
-    }
-    // kontejner se šuplíky
-    this.box(0.55, 0.68, 0.42, woodLight, { x: xc, z: z0 + 0.22, uv: 2 });
-    for (let i = 0; i < 3; i++) {
-      this.box(0.01, 0.18, 0.36, this.m.wood, { x: x1 - 0.025, y: 0.06 + i * 0.21, z: z0 + 0.22, occlude: false });
-    }
-    this.addCollider(x0, x1, z0, z1, 'desk');
+    const K = this.kenney();
+    // stůl (Kenney desk) podél západní stěny, předkem do pokoje (+X)
+    const desk = this.model('desk', { name: 'desk', fit: { w: 1.4 }, ry: 90, x: -1.6, z: -1.2, materials: { ...K, wood: this.m.woodLight }, uv: 1.2 });
+    this.alignBox(desk, { minX: -W / 2 + 0.02 });
+    this.colliderFromObject(desk, 0, 'desk');
+    const db = new THREE.Box3().setFromObject(desk);
+    const dTop = this.surfaceY(desk, (db.min.x + db.max.x) / 2, -1.2, 0.75);
+    const front = db.max.x;
 
-    // CRT monitor
-    const mon = this.group({ name: 'monitor', x: -1.72, y: 0.755, z: -1.2 });
-    this.box(0.36, 0.33, 0.4, plastic, { parent: mon, y: 0.02 });
-    this.box(0.24, 0.26, 0.3, plastic, { parent: mon, x: -0.18, y: 0.05 });
-    this.box(0.22, 0.02, 0.22, plastic, { parent: mon });
+    // monitor (Kenney computerScreen) + displej s chatem
+    const mon = this.group({ name: 'monitor', x: -1.78, y: dTop, z: -1.2 });
+    const screenModel = this.model('computerScreen', {
+      parent: mon,
+      fit: { w: 0.56 },
+      ry: 90,
+      materials: { metal: this.m.darkPlastic, metalDark: this.m.darkPlastic, default: this.m.darkPlastic },
+    });
+    const mb = new THREE.Box3().setFromObject(screenModel);
+    const mh = mb.max.y - mb.min.y;
+    const mzc = (mb.min.z + mb.max.z) / 2;
+    // přední plocha panelu (podstavec vystupuje dál, proto paprskem, ne z obálky)
+    const sy = mb.min.y + mh * 0.62;
+    const ray = new THREE.Raycaster(new THREE.Vector3(mb.max.x + 0.5, sy, mzc), new THREE.Vector3(-1, 0, 0));
+    const panelX = ray.intersectObject(screenModel, true)[0]?.point.x ?? mb.max.x;
     this.monitorMat = new THREE.MeshBasicMaterial({ map: Textures.monitor() });
-    this.plane(0.3, 0.24, this.monitorMat, { parent: mon, x: 0.1805, y: 0.185, ry: 90, segX: 1, segY: 1, castShadow: false });
+    this.plane((mb.max.z - mb.min.z) * 0.9, mh * 0.6, this.monitorMat, {
+      parent: mon,
+      x: panelX - mon.position.x + 0.02,
+      y: sy - dTop,
+      z: mzc - mon.position.z,
+      ry: 90,
+      segX: 1,
+      segY: 1,
+      castShadow: false,
+    });
 
-    // klávesnice, myš, hrnek, papíry, repro
-    this.box(0.16, 0.025, 0.44, plastic, { x: -1.47, y: 0.755, z: -1.2, ry: 4, occlude: false });
-    this.box(0.07, 0.025, 0.045, plastic, { x: -1.47, y: 0.755, z: -0.82, occlude: false });
-    const mug = this.mat({ color: 0x7a2f2a });
-    this.cyl(0.042, 0.038, 0.1, mug, { x: -1.55, y: 0.755, z: -0.68, sides: 7, occlude: false, name: 'mug' });
-    this.box(0.012, 0.05, 0.03, mug, { x: -1.505, y: 0.78, z: -0.68, occlude: false });
+    // klávesnice, myš, repro (Kenney)
+    const keys = { metalDark: this.mat({ color: 0x18191b, roughness: 0.95 }), metalMedium: this.mat({ color: 0x2c2e31, roughness: 0.95 }) };
+    this.model('computerKeyboard', { fit: { w: 0.44 }, ry: 90, x: front - 0.2, y: dTop, z: -1.2, materials: keys, occlude: false });
+    this.model('computerMouse', { fit: { d: 0.1 }, ry: 90, x: front - 0.2, y: dTop, z: -0.85, materials: K, occlude: false });
+    this.model('speakerSmall', { fit: { h: 0.2 }, ry: 90, x: -1.86, y: dTop, z: -0.82, materials: { ...K, wood: this.m.darkPlastic }, occlude: false });
+    this.model('speakerSmall', { fit: { h: 0.2 }, ry: 90, x: -1.86, y: dTop, z: -1.6, materials: { ...K, wood: this.m.darkPlastic }, occlude: false });
+
+    const mug = this.mat({ color: 0x7a2f2a, roughness: 0.35 });
+    this.cyl(0.042, 0.038, 0.1, mug, { x: front - 0.12, y: dTop, z: -0.66, sides: 10, occlude: false, name: 'mug' });
+    this.box(0.012, 0.05, 0.03, mug, { x: front - 0.075, y: dTop + 0.025, z: -0.66, occlude: false });
     const paper = this.mat({ color: 0xd8d4c4 });
-    this.box(0.22, 0.004, 0.3, paper, { x: -1.6, y: 0.756, z: -1.68, ry: 12, occlude: false });
-    this.box(0.22, 0.004, 0.3, paper, { x: -1.58, y: 0.76, z: -1.62, ry: -7, occlude: false });
-    this.box(0.09, 0.16, 0.09, black, { x: -1.8, y: 0.755, z: -0.86, occlude: false });
-    this.box(0.09, 0.16, 0.09, black, { x: -1.8, y: 0.755, z: -1.56, occlude: false });
+    this.box(0.22, 0.004, 0.3, paper, { x: -1.6, y: dTop + 0.001, z: -1.68, ry: 12, occlude: false });
+    this.box(0.22, 0.004, 0.3, paper, { x: -1.58, y: dTop + 0.005, z: -1.62, ry: -7, occlude: false });
 
-    // židle
-    const chair = this.group({ name: 'chair', x: -1.0, z: -1.15, ry: -8 });
-    const seat = this.mat({ map: Textures.fabric('#2a2c30', 11) });
-    this.box(0.46, 0.07, 0.46, seat, { parent: chair, y: 0.44 });
-    this.box(0.07, 0.55, 0.44, seat, { parent: chair, x: 0.22, y: 0.55, rz: -6 });
-    this.cyl(0.03, 0.03, 0.4, metal, { parent: chair, y: 0.05, occlude: false });
-    this.box(0.55, 0.04, 0.06, metal, { parent: chair, y: 0.03, occlude: false });
-    this.box(0.06, 0.04, 0.55, metal, { parent: chair, y: 0.03, occlude: false });
-    this.addCollider(-1.27, -0.75, -1.4, -0.9, 'chair');
+    // židle (Kenney chairDesk) otočená ke stolu
+    const chair = this.model('chairDesk', {
+      name: 'chair',
+      fit: { h: 1.0 },
+      ry: -100,
+      x: -0.95,
+      z: -1.15,
+      materials: { ...K, carpet: this.mat({ color: 0x2a2c30, roughness: 0.9 }) },
+    });
+    this.addCollider(-1.22, -0.72, -1.4, -0.9, 'chair');
+    void chair;
 
     // polička s knihami nad stolem
-    this.box(0.24, 0.03, 1.1, woodLight, { x: -1.88, y: 1.45, z: -1.2 });
-    this.box(0.18, 0.22, 1.0, this.mat({ map: Textures.books() }), { x: -1.89, y: 1.48, z: -1.25 });
+    this.bookMats = {
+      carpet: this.mat({ color: 0x6a2626, roughness: 0.8 }),
+      carpetDarker: this.mat({ color: 0x2a3550, roughness: 0.8 }),
+      carpetWhite: this.mat({ color: 0xcfc8b8, roughness: 0.8 }),
+      plant: this.mat({ color: 0x2f4a32, roughness: 0.8 }),
+      metal: this.mat({ color: 0x8a7a5a, roughness: 0.8 }),
+      default: this.mat({ color: 0x555555 }),
+    };
+    this.box(0.24, 0.03, 1.1, this.m.woodLight, { x: -1.88, y: 1.45, z: -1.2, uv: 1.5 });
+    for (const [z, ry] of [[-1.6, 90], [-1.25, 90], [-0.9, 80]]) {
+      this.model('books', { fit: { h: 0.22 }, ry, x: -1.89, y: 1.48, z, materials: this.bookMats, occlude: false });
+    }
 
     // plakát s hvězdami
     this.plane(0.55, 0.55, this.mat({ map: Textures.stars() }), { x: -W / 2 + 0.01, y: 1.55, z: 0.45, ry: 90, segX: 1, segY: 1, castShadow: false });
+
+    // koš u stolu
+    this.model('trashcan', { fit: { h: 0.36 }, x: -1.78, z: -0.28, materials: K });
+    this.addCollider(-1.95, -1.6, -0.45, -0.1);
   }
 
   // ---------------------------------------------------------------- skříň
@@ -295,7 +362,7 @@ export class BedroomScene extends BaseScene {
     const z1 = 2.5;
     const h = 2.05;
     const g = this.group({ name: 'wardrobe' });
-    const o = { parent: g, uv: 2 };
+    const o = { parent: g, uv: 1 };
     const xc = (x0 + x1) / 2;
     const zc = (z0 + z1) / 2;
     this.box(x1 - x0, h, 0.02, woodDark, { ...o, x: xc, z: z1 - 0.01 });
@@ -320,10 +387,10 @@ export class BedroomScene extends BaseScene {
     // dvířka na pantech
     const dw = (x1 - x0) / 2 - 0.005;
     const doorL = this.group({ parent: g, name: 'wardrobeDoorL', x: x0, z: z0 });
-    this.box(dw, h - 0.04, 0.025, wood, { parent: doorL, x: dw / 2, y: 0.02, uv: 2 });
+    this.box(dw, h - 0.04, 0.025, wood, { parent: doorL, x: dw / 2, y: 0.02, uv: 1 });
     this.box(0.02, 0.18, 0.03, this.m.metal, { parent: doorL, x: dw - 0.05, y: 1.0, z: -0.025, occlude: false });
     const doorR = this.group({ parent: g, name: 'wardrobeDoorR', x: x1, z: z0 });
-    this.box(dw, h - 0.04, 0.025, wood, { parent: doorR, x: -dw / 2, y: 0.02, uv: 2 });
+    this.box(dw, h - 0.04, 0.025, wood, { parent: doorR, x: -dw / 2, y: 0.02, uv: 1 });
     this.box(0.02, 0.18, 0.03, this.m.metal, { parent: doorR, x: -dw + 0.05, y: 1.0, z: -0.025, occlude: false });
     this.addCollider(x0, x1, z0 - 0.02, z1, 'wardrobe');
   }
@@ -331,7 +398,7 @@ export class BedroomScene extends BaseScene {
   // ---------------------------------------------------------------- drobnosti
   buildClutter() {
     // koberec
-    this.plane(1.6, 2.2, this.mat({ map: Textures.carpet() }), { x: -0.05, y: 0.006, z: 0.45, rx: -90, castShadow: false, segX: 3, segY: 4 });
+    this.plane(1.6, 2.2, this.m.carpet, { x: -0.05, y: 0.006, z: 0.45, rx: -90, uv: 0.9, castShadow: false, segX: 3, segY: 4 });
 
     // plakát kapely nad postelí
     this.plane(0.5, 0.74, this.mat({ map: Textures.poster() }), {
@@ -364,6 +431,12 @@ export class BedroomScene extends BaseScene {
 
     // plechovka na zemi
     this.cyl(0.033, 0.033, 0.12, this.mat({ color: 0x8a1e1e }), { x: -0.8, y: 0.033, z: -1.75, rz: 90, ry: 30, sides: 7, occlude: false });
+
+    // kytka v rohu a krabice s krámy (Kenney)
+    this.model('pottedPlant', { fit: { h: 0.95 }, x: 1.72, z: -2.2, materials: this.kenney({ wood: this.mat({ color: 0x6a3a28, roughness: 0.8 }) }) });
+    this.addCollider(1.5, 2, -2.5, -1.95);
+    this.model('cardboardBoxOpen', { fit: { h: 0.36 }, ry: 15, x: -1.62, z: 1.5, materials: this.kenney({ wood: this.mat({ color: 0x9a7a52, roughness: 0.95 }), woodDark: this.mat({ color: 0x6a5238, roughness: 0.95 }) }) });
+    this.addCollider(-1.95, -1.3, 1.25, 1.75);
 
     // komínek knih
     const bookCols = [0x5a2a2a, 0x2a3f5a, 0x6b5a2a];
@@ -491,7 +564,7 @@ export class BedroomScene extends BaseScene {
 
     // lampa na nočním stolku
     const lamp = new THREE.PointLight(0xffb36b, 5.5, 9, 1.6);
-    lamp.position.set(1.72, 0.86, -0.42);
+    lamp.position.set(this.lampPos.x, this.lampLightY, this.lampPos.z);
     lamp.castShadow = !this.lowQuality;
     lamp.shadow.mapSize.set(512, 512);
     lamp.shadow.camera.near = 0.05;

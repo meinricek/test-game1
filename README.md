@@ -3,8 +3,8 @@
 Krátké hororové demo z pohledu první osoby pro prohlížeč (PC i mobil), ve stylu indie
 found-footage hororů: low-poly modely, tma, teplé světlo lampy, měkké stíny a jemné zrno
 kamery. Volitelně jde v pauze zapnout retro PS1 vzhled (nízké rozlišení, pixely, třes vrcholů).
-Je to vlastní hra s vlastním příběhem. Všechny modely, textury a zvuky vznikají
-procedurálně v kódu.
+Je to vlastní hra s vlastním příběhem. Nábytek jsou CC0 modely od Kenney, povrchy
+CC0 textury z Poly Haven a zvuky vznikají syntézou v kódu (viz [CREDITS.md](CREDITS.md)).
 
 **▶ Hrát: https://meinricek.github.io/test-game1/**
 
@@ -81,7 +81,8 @@ src/
     Player.js              – FPS ovladač, kolize (kruh vs. AABB), přikrčení, head bob, baterka,
                              skriptované pohledy (lookAt, focus kamery)
     Scheduler.js           – časovače a tweeny v herním čase (během pauzy stojí)
-    Textures.js            – procedurální low-res textury (canvas, NearestFilter, bez mipmap)
+    Assets.js              – načítání CC0 modelů (.glb) a textur (.jpg) z public/
+    Textures.js            – procedurální textury (plakáty, monitor, obloha…) + přepínání filtrů
     Settings.js, EventBus.js
   systems/
     EventSystem.js         – datově řízené triggery (spouštěč + podmínka + seznam akcí)
@@ -92,7 +93,7 @@ src/
     ObjectiveSystem.js     – úkoly vlevo nahoře, postupné odemykání a odškrtávání
     AudioSystem.js         – Web Audio: ambient, kroky, klepání, cvaknutí, vrzání… (vše syntéza)
   scenes/
-    BaseScene.js           – helpery pro stavbu místnosti (box, plane, kolize, registrace objektů)
+    BaseScene.js           – helpery pro stavbu místnosti (box, plane, model, texMat, kolize…)
     BedroomScene.js        – geometrie a světla pokoje
     index.js               – registr scén
   data/
@@ -100,6 +101,7 @@ src/
     dialogues.json         – všechny monology/titulky
     scenes/bedroom.json    – úkoly, interakce, telefon/monitor, příznaky a triggery pokoje
   ui/                      – UI.js + style.css
+public/models, textures    – CC0 assety (Kenney Furniture Kit, Poly Haven)
 scripts/playtest.mjs       – automatický průchod demem (Playwright) + screenshoty
 ```
 
@@ -209,6 +211,35 @@ Struktura odpovídá běžnému Unity projektu:
 - `PS1.js` + post-process → URP shader (vertex snapping, affine UV) + Render Texture 480×270 s point filtrem.
 - `Player.js` → `CharacterController` (kolize zajistí fyzika).
 
+### Modely a textury
+
+Assety, které scéna potřebuje, uvádí statická vlastnost `assets` třídy scény a před
+`build()` se načtou (titulní obrazovka zatím ukazuje „Načítám… %“):
+
+```js
+static assets = {
+  models: ['bedSingle', 'desk'],                // public/models/<jméno>.glb
+  textures: { wall: 'decrepit_wallpaper' },     // public/textures/<id>_diff.jpg
+  normals: ['decrepit_wallpaper'],              // + <id>_nor_gl.jpg
+};
+```
+
+Ve `build()` pak:
+
+```js
+const wall = this.texMat('decrepit_wallpaper', { normal: 0.7 });
+const bed = this.model('bedSingle', {
+  fit: { d: 2.05 },             // délka v metrech (nebo w / h, nebo scale)
+  x: 1.45, z: 0.9, ry: 0,       // střed půdorysu, otočení (Kenney modely mají předek na +Z)
+  materials: this.kenney(),     // náhrada plochých barev Kenney za textury
+  collider: true,
+});
+const y = this.surfaceY(bed, 1.2, 0.5); // výška povrchu – pro pokládání věcí na nábytek
+```
+
+UV souřadnice modelů se přepočítávají projekcí z boxu, takže textury mají všude stejnou
+hustotu.
+
 ## Licence a zdroje
 
-Viz [CREDITS.md](CREDITS.md). Žádné externí assety nejsou použité.
+Viz [CREDITS.md](CREDITS.md). Všechny cizí assety jsou CC0.

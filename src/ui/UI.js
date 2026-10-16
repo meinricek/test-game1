@@ -52,6 +52,21 @@ export class UI {
     window.addEventListener('keydown', go);
   }
 
+  /** Stav načítání na titulní obrazovce: 0..1 = průběh, null = hotovo, -1 = chyba. */
+  setLoading(p) {
+    const el = $('title-start');
+    if (p === null) {
+      el.textContent = CONFIG.startText;
+      el.classList.add('blink');
+    } else if (p < 0) {
+      el.textContent = 'Chyba při načítání – obnov stránku';
+      el.classList.remove('blink');
+    } else {
+      el.textContent = `Načítám… ${Math.round(p * 100)} %`;
+      el.classList.remove('blink');
+    }
+  }
+
   showGame() {
     this.el.title.classList.add('hidden');
     this.el.end.classList.add('hidden');

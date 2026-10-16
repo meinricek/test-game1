@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { applyPS1 } from '../core/PS1.js';
+import { getModel, getTexture } from '../core/Assets.js';
 
 /**
  * Základ každé místnosti. Potomek přepíše build() a pomocí helperů poskládá geometrii.
@@ -41,6 +42,91 @@ export class BaseScene {
     const { roughness = 0.82, metalness = 0, ...rest } = opts;
     if (this.lowQuality) return applyPS1(new THREE.MeshLambertMaterial(rest));
     return applyPS1(new THREE.MeshStandardMaterial({ roughness, metalness, ...rest }));
+  }
+
+  /**
+   * Materiál s CC0 texturou z Poly Haven (public/textures). UV hustotu určuje geometrie
+   * (volba uv u box/plane/model = opakování na metr).
+   */
+  texMat(id, opts = {}) {
+    const map = getTexture(id, 'diff');
+    const normalMap = getTexture(id, 'nor_gl');
+    const o = { map, ...opts };
+    if (normalMap) {
+      o.normalMap = normalMap;
+      o.normalScale = new THREE.Vector2(opts.normal ?? 0.8, opts.normal ?? 0.8);
+    }
+    delete o.normal;
+    return this.mat(o);
+  }
+
+  /**
+   * Vloží model (CC0, Kenney Furniture Kit) do scény.
+   *  - materials: { jménoMateriáluVModelu: THREE.Material } – nahradí ploché barvy modelu
+   *  - fit: { w | h | d: metry } nebo scale: číslo – velikost
+   *  - x, y, z: střed půdorysu a spodní hrana, ry: otočení (stupně; model má předek na +Z)
+   *  - uv: hustota textury (opakování na metr), collider, name, parent, castShadow
+   */
+  model(name, o = {}) {
+    const src = getModel(name);
+    const srcBox = new THREE.Box3().setFromObject(src);
+    const size = srcBox.getSize(new THREE.Vector3());
+    let k = o.scale ?? 1;
+    if (o.fit?.w) k = o.fit.w / size.x;
+    else if (o.fit?.h) k = o.fit.h / size.y;
+    else if (o.fit?.d) k = o.fit.d / size.z;
+
+    const g = new THREE.Group();
+    const scaleM = new THREE.Matrix4().makeScale(k, k, k);
+    src.traverse((m) => {
+      if (!m.isMesh) return;
+      // geometrii "zapečeme" do jednoho měřítka a přepočítáme UV projekcí z boxu
+      const geo = m.geometry.clone().applyMatrix4(scaleM.clone().multiply(m.matrixWorld));
+      boxProjectUV(geo, o.uv ?? 1.5);
+      const matName = m.material?.name;
+      const material = o.materials?.[matName] ?? o.materials?.default ?? this.mat({ color: m.material.color });
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.castShadow = o.castShadow ?? true;
+      mesh.receiveShadow = true;
+      mesh.userData.modelMaterial = matName;
+      g.add(mesh);
+    });
+    g.rotation.y = deg(o.ry);
+    (o.parent || this.root).add(g);
+    // zarovnání: střed půdorysu na x/z, spodek na y (v souřadnicích rodiče)
+    g.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(g);
+    const c = box.getCenter(new THREE.Vector3());
+    if (o.parent) o.parent.worldToLocal(c);
+    const parentY = o.parent ? o.parent.getWorldPosition(new THREE.Vector3()).y : 0;
+    g.position.x += (o.x ?? 0) - c.x;
+    g.position.z += (o.z ?? 0) - c.z;
+    g.position.y += (o.y ?? 0) - (box.min.y - parentY);
+    g.updateWorldMatrix(true, true);
+    if (o.name) this.register(o.name, g);
+    if (o.occlude !== false) g.children.forEach((m) => this.occluders.push(m));
+    if (o.collider) this.colliderFromObject(g, typeof o.collider === 'number' ? o.collider : 0, o.name);
+    return g;
+  }
+
+  /** Výška horní plochy objektu v bodě (x, z) – pro pokládání věcí na nábytek. */
+  surfaceY(obj, x, z, fallback = 0) {
+    obj.updateWorldMatrix(true, true);
+    const rc = new THREE.Raycaster(new THREE.Vector3(x, 10, z), new THREE.Vector3(0, -1, 0));
+    const hit = rc.intersectObject(obj, true)[0];
+    return hit ? hit.point.y : fallback;
+  }
+
+  /** Posune objekt tak, aby jeho obálka začínala/končila na dané souřadnici (např. u zdi). */
+  alignBox(obj, { minX, maxX, minZ, maxZ }) {
+    obj.updateWorldMatrix(true, true);
+    const b = new THREE.Box3().setFromObject(obj);
+    if (minX !== undefined) obj.position.x += minX - b.min.x;
+    if (maxX !== undefined) obj.position.x += maxX - b.max.x;
+    if (minZ !== undefined) obj.position.z += minZ - b.min.z;
+    if (maxZ !== undefined) obj.position.z += maxZ - b.max.z;
+    obj.updateWorldMatrix(true, true);
+    return obj;
   }
 
   basic(opts = {}) {
@@ -144,6 +230,34 @@ export class BaseScene {
       }
     });
   }
+}
+
+// UV podle dominantní osy normály (box/triplanar projekce) – textura má všude stejnou hustotu.
+function boxProjectUV(geo, density) {
+  const pos = geo.attributes.position;
+  if (!geo.attributes.normal) geo.computeVertexNormals();
+  const nrm = geo.attributes.normal;
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    const ax = Math.abs(nrm.getX(i));
+    const ay = Math.abs(nrm.getY(i));
+    const az = Math.abs(nrm.getZ(i));
+    let u;
+    let v;
+    if (ax >= ay && ax >= az) {
+      u = pos.getZ(i);
+      v = pos.getY(i);
+    } else if (ay >= az) {
+      u = pos.getX(i);
+      v = pos.getZ(i);
+    } else {
+      u = pos.getX(i);
+      v = pos.getY(i);
+    }
+    uv[i * 2] = u * density;
+    uv[i * 2 + 1] = v * density;
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
 }
 
 function deg(v) {

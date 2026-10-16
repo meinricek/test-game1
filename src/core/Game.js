@@ -15,6 +15,7 @@ import { ObjectiveSystem } from '../systems/ObjectiveSystem.js';
 import { InteractionSystem } from '../systems/InteractionSystem.js';
 import { EventSystem } from '../systems/EventSystem.js';
 import { SCENES } from '../scenes/index.js';
+import { loadAssets } from './Assets.js';
 import story from '../data/story.json';
 import dialogues from '../data/dialogues.json';
 
@@ -73,8 +74,13 @@ export class Game {
     window.addEventListener('resize', () => this.renderer.resize(this.camera));
     this.renderer.resize(this.camera);
 
-    this.loadScene(story.startScene);
-    this.ui.onStart(() => this.start());
+    this.ui.setLoading(0);
+    this.ready = this.loadScene(story.startScene).then(() => this.ui.setLoading(null));
+    this.ready.catch((e) => {
+      console.error(e);
+      this.ui.setLoading(-1);
+    });
+    this.ui.onStart(() => this.ready.then(() => this.start()));
     this.ui.onResume(() => this.resume());
     this.ui.onRestart(() => this.restart());
 
@@ -124,9 +130,12 @@ export class Game {
   }
 
   // ---------- scény ----------
-  loadScene(id) {
+  async loadScene(id) {
     const entry = SCENES[id];
     if (!entry) throw new Error(`Scéna "${id}" neexistuje`);
+    this.loading = true;
+    // assety scény (modely, textury) – při restartu už jsou v cache
+    await loadAssets(entry.Scene.assets, (p) => this.ui.setLoading(p));
     if (this.scene) {
       this.scene.dispose();
       this.scene.root.remove(this.camera);
@@ -150,6 +159,14 @@ export class Game {
     this.sceneStarted = false;
     // první render = kompilace shaderů ještě před startem
     this.renderer.gl.compile(this.scene.root, this.camera);
+    this.loading = false;
+  }
+
+  /** Spustí události scény (intro atd.) – jen jednou po načtení. */
+  startScene() {
+    if (this.sceneStarted) return;
+    this.sceneStarted = true;
+    this.events.start();
   }
 
   start() {
@@ -159,10 +176,7 @@ export class Game {
     this.mode = 'playing';
     this.input.enabled = true;
     this.input.requestLock();
-    if (!this.sceneStarted) {
-      this.sceneStarted = true;
-      this.events.start();
-    }
+    this.startScene();
   }
 
   pause() {
@@ -184,14 +198,16 @@ export class Game {
     this.input.requestLock();
   }
 
-  restart() {
+  async restart() {
     this.ui.showPause(false);
     this.ui.resetOverlays();
     this.audio.suspend(false);
     this.audio.ambient('off', 0.1);
-    this.loadScene(this.scene.data.id);
-    this.playTime = 0;
     this.mode = 'title';
+    // požádat o pointer lock hned (ještě v rámci kliknutí), pak načíst scénu
+    this.input.requestLock();
+    await this.loadScene(this.scene.data.id);
+    this.playTime = 0;
     this.start();
   }
 
@@ -220,6 +236,7 @@ export class Game {
       this.ui.setFps(this.fps.value);
     }
 
+    if (!this.scene || this.loading) return;
     if (this.mode === 'playing') {
       this.playTime += dt;
       this.scheduler.update(dt);

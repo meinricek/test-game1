@@ -199,5 +199,8 @@ export const ACTIONS = {
   end: (g, a) => g.endDemo(a.text, a.sub),
 
   /** { "type": "scene", "id": "hallway" } – přechod do jiné scény */
-  scene: (g, a) => g.loadScene(a.id),
+  scene: async (g, a) => {
+    await g.loadScene(a.id);
+    g.startScene();
+  },
 };

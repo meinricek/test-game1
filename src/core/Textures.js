@@ -61,6 +61,12 @@ function applyFilter(tex, retro) {
   tex.generateMipmaps = !retro;
 }
 
+/** Zaregistruje externí texturu, aby i ona reagovala na přepnutí retro režimu. */
+export function registerTexture(tex) {
+  applyFilter(tex, retroMode);
+  all.push(tex);
+}
+
 /** Přepne filtrování všech vytvořených textur (retro = ostré pixely). */
 export function setRetroTextures(on) {
   if (on === retroMode) return;
