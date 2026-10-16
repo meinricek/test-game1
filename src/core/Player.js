@@ -30,7 +30,7 @@ export class Player {
     this.flashlight = new THREE.SpotLight(0xdfe8ff, 0, 9, 0.42, 0.55, 1.6);
     this.flashlight.position.set(0.12, -0.12, 0.05);
     this.flashlight.castShadow = true;
-    this.flashlight.shadow.mapSize.set(lowQuality ? 256 : 512, lowQuality ? 256 : 512);
+    this.flashlight.shadow.mapSize.set(lowQuality ? 512 : 1024, lowQuality ? 512 : 1024);
     this.flashlight.shadow.camera.near = 0.1;
     this.flashlight.shadow.camera.far = 9;
     this.flashlight.shadow.bias = -0.002;

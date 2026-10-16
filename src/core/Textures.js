@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 
-// Procedurální low-res textury kreslené do <canvas>. Žádné externí soubory.
-// Všechny používají NearestFilter a nemají mipmapy (PS1 vzhled).
+// Procedurální textury kreslené do <canvas>. Žádné externí soubory.
+// Motiv se kreslí v "logických" pixelech (např. 32×32) a canvas má DETAIL× vyšší rozlišení,
+// přes který se přidá jemný šum povrchu. V moderním režimu se filtrují lineárně s mipmapami,
+// v retro (PS1) režimu se přepnou na NearestFilter bez mipmap.
+const DETAIL = 4;
+const all = [];
 
 function rng(seed) {
   let s = seed >>> 0 || 1;
@@ -14,20 +18,57 @@ function rng(seed) {
 }
 
 function make(w, h, draw, { repeat = [1, 1] } = {}) {
+  // motiv v logickém rozlišení…
+  const small = document.createElement('canvas');
+  small.width = w;
+  small.height = h;
+  draw(small.getContext('2d'), w, h);
+  // …zvětšený s vyhlazením (měkké přechody místo kostiček)
   const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
+  c.width = w * DETAIL;
+  c.height = h * DETAIL;
   const ctx = c.getContext('2d');
-  draw(ctx, w, h);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(small, 0, 0, c.width, c.height);
+  // jemná zrnitost povrchu v plném rozlišení (aby velké "pixely" motivu nepůsobily ploše)
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const d = img.data;
+  const r = rng(w * 131 + h);
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (r() - 0.5) * 18;
+    d[i] += n;
+    d[i + 1] += n;
+    d[i + 2] += n;
+  }
+  ctx.putImageData(img, 0, 0);
   const tex = new THREE.CanvasTexture(c);
-  tex.magFilter = THREE.NearestFilter;
-  tex.minFilter = THREE.NearestFilter;
-  tex.generateMipmaps = false;
+  applyFilter(tex, retroMode);
+  tex.anisotropy = 4;
+  all.push(tex);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(repeat[0], repeat[1]);
   tex.userData.canvas = c;
   return tex;
+}
+
+let retroMode = false;
+
+function applyFilter(tex, retro) {
+  tex.magFilter = retro ? THREE.NearestFilter : THREE.LinearFilter;
+  tex.minFilter = retro ? THREE.NearestFilter : THREE.LinearMipmapLinearFilter;
+  tex.generateMipmaps = !retro;
+}
+
+/** Přepne filtrování všech vytvořených textur (retro = ostré pixely). */
+export function setRetroTextures(on) {
+  if (on === retroMode) return;
+  retroMode = on;
+  for (const t of all) {
+    applyFilter(t, on);
+    t.needsUpdate = true;
+  }
 }
 
 function speckle(ctx, w, h, r, amount, alpha = 0.12) {

@@ -27,7 +27,7 @@ export class BedroomScene extends BaseScene {
       trim: this.mat({ color: 0xb9b5a8 }),
       black: this.mat({ color: 0x151517 }),
       plastic: this.mat({ color: 0xbdb7a4 }),
-      metal: this.mat({ map: Textures.metal() }),
+      metal: this.mat({ map: Textures.metal(), metalness: 0.6, roughness: 0.45 }),
     };
 
     this.buildRoom();
@@ -493,7 +493,7 @@ export class BedroomScene extends BaseScene {
     const lamp = new THREE.PointLight(0xffb36b, 5.5, 9, 1.6);
     lamp.position.set(1.72, 0.86, -0.42);
     lamp.castShadow = !this.lowQuality;
-    lamp.shadow.mapSize.set(256, 256);
+    lamp.shadow.mapSize.set(512, 512);
     lamp.shadow.camera.near = 0.05;
     lamp.shadow.camera.far = 8;
     lamp.shadow.bias = -0.004;
@@ -512,7 +512,7 @@ export class BedroomScene extends BaseScene {
     moon.position.set(3.6, 6.5, -10);
     moon.target.position.set(0.1, 0, 0.6);
     moon.castShadow = true;
-    moon.shadow.mapSize.set(this.lowQuality ? 256 : 512, this.lowQuality ? 256 : 512);
+    moon.shadow.mapSize.set(this.lowQuality ? 512 : 1024, this.lowQuality ? 512 : 1024);
     moon.shadow.camera.near = 6;
     moon.shadow.camera.far = 20;
     moon.shadow.bias = -0.0015;

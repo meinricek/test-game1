@@ -1,7 +1,8 @@
 # Noční směna
 
 Krátké hororové demo z pohledu první osoby pro prohlížeč (PC i mobil), ve stylu indie
-found-footage hororů: low-poly modely, PS1 vzhled, nízké rozlišení, zrno a tma.
+found-footage hororů: low-poly modely, tma, teplé světlo lampy, měkké stíny a jemné zrno
+kamery. Volitelně jde v pauze zapnout retro PS1 vzhled (nízké rozlišení, pixely, třes vrcholů).
 Je to vlastní hra s vlastním příběhem. Všechny modely, textury a zvuky vznikají
 procedurálně v kódu.
 
@@ -46,7 +47,7 @@ Vznikly automaticky v headless Chromiu (`npm run test:e2e`), viz [`/screenshots`
 
 Dotykové zařízení se pozná automaticky (`pointer: coarse` / touch events).
 Úvodní obrazovka „Klepni pro start“ zároveň odemkne zvuk, protože mobilní prohlížeče
-vyžadují gesto uživatele. Pauza obsahuje citlivost, hlasitost, PS1 efekt a FPS.
+vyžadují gesto uživatele. Pauza obsahuje citlivost, hlasitost, retro PS1 vzhled a FPS.
 Nastavení se ukládají do `localStorage`.
 
 > Ctrl+W zavře v prohlížeči záložku a hra to nemůže zablokovat, proto lze přikrčení
@@ -141,13 +142,22 @@ Příklad, zhasnutí lampy:
 
 ### Vzhled
 
-- Scéna se renderuje do render targetu s výškou ~270 px (šířka podle poměru stran,
-  na výšku orientovaný displej má 270 px kratší strana). Pak ho fullscreen shader roztáhne
-  na canvas s `image-rendering: pixelated`.
-- Post-process (`Renderer.js`): chromatická aberace, odsycení, kontrast, studený tón,
-  vinětace, animované zrno a (s PS1 efektem) 15bit barvy s Bayer ditheringem.
+Výchozí je **moderní režim**:
+- render v (skoro) nativním rozlišení (DPR max 1,5, výška max 1080 px, mobil 70 %),
+  MSAA vyhlazení hran, PCF stíny 1024 px,
+- na PC fyzikální materiály `MeshStandardMaterial` (lesky od baterky), na mobilu Lambert,
+- procedurální textury v 4× vyšším rozlišení s jemným šumem povrchu, lineární filtrování
+  s mipmapami,
+- post-process (`Renderer.js`): expozice + filmová křivka (ACES), lehké odsycení, studený
+  tón, vinětace, jemné zrno kamery a jen náznak chromatické aberace.
+
+**Retro PS1 režim** (přepínač v pauze, hodnoty v `CONFIG.postRetro`):
+- render do ~480×270 a upscale bez vyhlazení (`image-rendering: pixelated`),
+- textury přepnuté na `NearestFilter`, 15bit barvy s Bayer ditheringem, silnější zrno,
 - PS1 efekty (`PS1.js`): vrcholy se přichytávají na hrubou mřížku v clip space a UV se
-  interpolují afinně (trik `uv*w / w`). Obojí se přepíná uniformou bez rekompilace shaderů.
+  interpolují afinně (trik `uv*w / w`). Vše se přepíná za běhu bez rekompilace shaderů.
+
+Všechny parametry (rozlišení, zrno, vinětace, sytost, tón, expozice) jsou v `src/config.js`.
 - Světla: lampa (bodové, stíny), monitor, měsíc skrz okno (spot se stíny, kreslí kříž okna
   na podlahu), baterka (spot se stíny), pouliční lampa venku. Mlha `FogExp2`.
 - Světla se vypínají přes `intensity = 0`, ne `visible`. Změna počtu světel by znamenala
@@ -155,11 +165,13 @@ Příklad, zhasnutí lampy:
 
 ### Výkon
 
-- Malé rozlišení (~480×270) drží fill-rate na minimu i na slabém mobilu.
-- Na dotykových zařízeních je „low quality“: lampa bez stínů, menší stínové mapy.
-- Lambert materiály, cca stovka draw callů, instancovaný plot, shadery se kompilují před startem.
-- V headless Chromiu se softwarovým WebGL (SwiftShader, bez GPU) běží demo na ~20–35 FPS.
-  Na skutečném mobilu s GPU je rezerva výrazně větší.
+- Na dotykových zařízeních je „low quality“: 70 % rozlišení, Lambert materiály,
+  lampa bez stínů, menší stínové mapy, 2× MSAA.
+- Cca stovka draw callů, instancovaný plot, shadery se kompilují před startem.
+- Když slabé zařízení nestíhá, retro režim (~480×270) je nejrychlejší varianta.
+- Výkon na skutečném hardwaru zatím změřený není. Testy běží v headless Chromiu se
+  softwarovým WebGL (SwiftShader, bez GPU). Tam má plné rozlišení na PC jednotky FPS,
+  proto `scripts/playtest.mjs` hraje ve sníženém rozlišení a jen screenshoty dělá v plném.
 
 ## Jak přidat novou scénu
 

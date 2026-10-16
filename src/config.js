@@ -3,27 +3,44 @@ export const CONFIG = {
   title: 'Noční směna',
   subtitle: 'demo',
   startText: 'Klepni pro start',
-  storageKey: 'nocni-smena.settings.v1',
+  storageKey: 'nocni-smena.settings.v2',
 
   render: {
-    // Cílová výška vnitřního rozlišení (šířka se dopočítá podle poměru stran).
-    // Na výšku orientovaném displeji se 270 použije pro kratší stranu.
-    baseHeight: 270,
+    // Výchozí (moderní) režim: skoro nativní rozlišení, vyhlazování, měkké stíny.
+    // Násobek rozlišení obrazovky (PC / mobil) a strop pro výšku obrazu v px.
+    scale: 1,
+    mobileScale: 0.7,
+    maxPixelRatio: 1.5,
+    maxHeight: 1080,
+    // Retro (PS1) režim: vnitřní výška obrazu, šířka se dopočítá podle poměru stran.
+    retroHeight: 270,
     // Mřížka pro PS1 vertex snapping (menší číslo = větší "třes").
     snapResolution: [240, 135],
     fov: 70,
   },
 
+  // Post-process pro moderní režim: čistý obraz, jen jemné zrno kamery a vinětace.
   post: {
+    grain: 0.035,
+    vignette: 0.45,
+    chromaticAberration: 0.0012,
+    saturation: 0.78,
+    // Studený tón (násobí výslednou barvu).
+    tint: [0.92, 0.97, 1.04],
+    contrast: 1.05,
+    exposure: 1.25,
+    colorLevels: 32,
+  },
+
+  // Přepisy post-processu pro retro (PS1) režim.
+  postRetro: {
     grain: 0.075,
     vignette: 0.55,
     chromaticAberration: 0.006,
     saturation: 0.55,
-    // Studený tón (násobí výslednou barvu).
     tint: [0.86, 0.95, 1.08],
     contrast: 1.12,
-    // Barevná hloubka (jen se zapnutým PS1 efektem) – 32 úrovní = 15bit barvy.
-    colorLevels: 32,
+    exposure: 1.0,
   },
 
   player: {
@@ -41,7 +58,7 @@ export const CONFIG = {
   defaults: {
     sensitivity: 1.0,
     volume: 0.8,
-    ps1: true,
+    ps1: false,
     showFps: false,
   },
 };

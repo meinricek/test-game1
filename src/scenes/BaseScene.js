@@ -33,8 +33,14 @@ export class BaseScene {
   }
 
   // ---------- materiály ----------
+  /**
+   * Základní materiál povrchů. Na PC fyzikální MeshStandardMaterial (lesky od baterky,
+   * realističtější světlo), na mobilu levnější MeshLambertMaterial.
+   */
   mat(opts = {}) {
-    return applyPS1(new THREE.MeshLambertMaterial(opts));
+    const { roughness = 0.82, metalness = 0, ...rest } = opts;
+    if (this.lowQuality) return applyPS1(new THREE.MeshLambertMaterial(rest));
+    return applyPS1(new THREE.MeshStandardMaterial({ roughness, metalness, ...rest }));
   }
 
   basic(opts = {}) {

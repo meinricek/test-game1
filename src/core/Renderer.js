@@ -20,6 +20,7 @@ uniform float uContrast;
 uniform float uLevels;
 uniform float uPS1;
 uniform float uFlash;
+uniform float uExposure;
 uniform vec3 uTint;
 varying vec2 vUv;
 
@@ -52,7 +53,9 @@ void main() {
   col.g = texture2D(tDiffuse, uv).g;
   col.b = texture2D(tDiffuse, uv - off).b;
 
-  // lineární -> sRGB
+  // expozice + filmová křivka (ACES aproximace), pak lineární -> sRGB
+  col *= uExposure;
+  if (uPS1 < 0.5) col = clamp((col * (2.51 * col + 0.03)) / (col * (2.43 * col + 0.59) + 0.14), 0.0, 1.0);
   col = pow(max(col, 0.0), vec3(1.0 / 2.2));
 
   // odsycení, kontrast, studený tón
@@ -65,8 +68,8 @@ void main() {
   float v = smoothstep(0.82, 0.18, length(d * vec2(1.0, 0.92)));
   col *= mix(1.0, v, uVignette);
 
-  // zrno (animované, po pixelech nízkého rozlišení)
-  vec2 px = floor(uv * uRes);
+  // zrno (animované; v moderním režimu jemnější shluky po 2 px)
+  vec2 px = floor(uv * uRes / (uPS1 > 0.5 ? 1.0 : 2.0));
   float n = hash(px + fract(floor(uTime * 24.0) * 0.1234) * 1000.0) - 0.5;
   col += n * uGrain * (0.6 + 0.8 * (1.0 - l));
 
@@ -95,7 +98,7 @@ export class Renderer {
     });
     this.gl.setPixelRatio(1);
     this.gl.shadowMap.enabled = true;
-    this.gl.shadowMap.type = THREE.BasicShadowMap;
+    this.gl.shadowMap.type = THREE.PCFShadowMap;
     this.gl.outputColorSpace = THREE.LinearSRGBColorSpace;
     this.gl.toneMapping = THREE.NoToneMapping;
 
@@ -104,7 +107,10 @@ export class Renderer {
       magFilter: THREE.NearestFilter,
       generateMipmaps: false,
       depthBuffer: true,
+      // MSAA vyhlazení hran (WebGL2); v retro režimu se nepoužívá
+      samples: lowQuality ? 2 : 4,
     });
+    this.retro = false;
 
     const p = CONFIG.post;
     this.postMaterial = new THREE.ShaderMaterial({
@@ -122,7 +128,8 @@ export class Renderer {
         uSat: { value: p.saturation },
         uContrast: { value: p.contrast },
         uLevels: { value: p.colorLevels },
-        uPS1: { value: 1 },
+        uPS1: { value: 0 },
+        uExposure: { value: p.exposure ?? 1 },
         uFlash: { value: 0 },
         uTint: { value: new THREE.Vector3(...p.tint) },
       },
@@ -141,15 +148,41 @@ export class Renderer {
     this.height = 4;
   }
 
-  setPS1(on) {
-    this.postMaterial.uniforms.uPS1.value = on ? 1 : 0;
+  /**
+   * Retro = PS1 vzhled: nízké rozlišení, upscale bez vyhlazení, dithering, silnější zrno.
+   * Jinak moderní čistý obraz v (skoro) nativním rozlišení.
+   */
+  setRetro(on, camera) {
+    this.retro = on;
+    const u = this.postMaterial.uniforms;
+    const p = on ? { ...CONFIG.post, ...CONFIG.postRetro } : CONFIG.post;
+    u.uPS1.value = on ? 1 : 0;
+    u.uGrain.value = p.grain;
+    u.uVignette.value = p.vignette;
+    u.uCA.value = p.chromaticAberration;
+    u.uSat.value = p.saturation;
+    u.uContrast.value = p.contrast;
+    u.uExposure.value = p.exposure ?? 1;
+    u.uTint.value.set(...p.tint);
+    this.target.samples = on ? 0 : this.lowQuality ? 2 : 4;
+    this.target.dispose(); // znovu se vytvoří s novým počtem vzorků
+    this.canvas.classList.toggle('retro', on);
+    this.resize(camera);
   }
 
   resize(camera) {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const base = CONFIG.render.baseHeight;
-    const scale = Math.min(w, h) / base;
+    const r = CONFIG.render;
+    let scale;
+    if (this.retro) {
+      scale = Math.min(w, h) / r.retroHeight;
+    } else {
+      const dpr = Math.min(window.devicePixelRatio || 1, r.maxPixelRatio);
+      scale = 1 / (dpr * (this.lowQuality ? r.mobileScale : r.scale));
+      // strop výšky obrazu kvůli výkonu
+      if (h / scale > r.maxHeight) scale = h / r.maxHeight;
+    }
     this.width = Math.max(64, Math.round(w / scale));
     this.height = Math.max(64, Math.round(h / scale));
     this.gl.setSize(this.width, this.height, false);

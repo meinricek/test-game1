@@ -7,6 +7,7 @@ import { Player } from './Player.js';
 import { Scheduler } from './Scheduler.js';
 import { Settings } from './Settings.js';
 import { setPS1Enabled } from './PS1.js';
+import { setRetroTextures } from './Textures.js';
 import { UI } from '../ui/UI.js';
 import { AudioSystem } from '../systems/AudioSystem.js';
 import { DialogueSystem } from '../systems/DialogueSystem.js';
@@ -84,8 +85,11 @@ export class Game {
     const s = this.settings;
     this.player.sensitivity = s.get('sensitivity');
     this.audio.setVolume(s.get('volume'));
-    setPS1Enabled(s.get('ps1'));
-    this.renderer.setPS1(s.get('ps1'));
+    const retro = !!s.get('ps1');
+    setPS1Enabled(retro);
+    setRetroTextures(retro);
+    if (this.renderer.retro !== retro || !this._settingsApplied) this.renderer.setRetro(retro, this.camera);
+    this._settingsApplied = true;
   }
 
   _bindInput() {
@@ -203,12 +207,12 @@ export class Game {
   // ---------- smyčka ----------
   frame() {
     this.timer.update();
-    let dt = this.timer.getDelta();
-    if (dt > 0.1) dt = 0.1;
+    const realDt = this.timer.getDelta();
+    const dt = Math.min(realDt, 0.1);
     this.time += dt;
 
     this.fps.frames++;
-    this.fps.acc += dt;
+    this.fps.acc += realDt;
     if (this.fps.acc >= 0.5) {
       this.fps.value = Math.round(this.fps.frames / this.fps.acc);
       this.fps.frames = 0;

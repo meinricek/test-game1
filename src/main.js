@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Game } from './core/Game.js';
+import { CONFIG } from './config.js';
 
 const canvas = document.getElementById('view');
 const game = new Game(canvas);
@@ -22,6 +23,12 @@ window.__debug = {
     const d = c.sub(eye).normalize();
     p.yaw = Math.atan2(-d.x, -d.z);
     p.pitch = Math.asin(d.y);
+  },
+  /** Změní násobek rozlišení (moderní režim) – např. pro rychlejší testy bez GPU. */
+  setScale(scale) {
+    CONFIG.render.scale = scale;
+    CONFIG.render.mobileScale = scale;
+    game.renderer.resize(game.camera);
   },
   state() {
     return {

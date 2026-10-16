@@ -27,8 +27,8 @@ const browser = await chromium.launch({
 });
 
 const PROFILES = [
-  { name: 'pc', viewport: { width: 1280, height: 720 }, touch: false },
-  { name: 'mobil', viewport: { width: 844, height: 390 }, touch: true, isMobile: true, deviceScaleFactor: 2 },
+  { name: 'pc', viewport: { width: 1280, height: 720 }, touch: false, testScale: 0.35 },
+  { name: 'mobil', viewport: { width: 844, height: 390 }, touch: true, isMobile: true, deviceScaleFactor: 2, testScale: 0.7 },
 ];
 
 let failures = 0;
@@ -49,11 +49,18 @@ for (const prof of PROFILES) {
 
   const log = (...a) => console.log(`[${prof.name}]`, ...a);
   const state = () => page.evaluate(() => window.__debug.state());
+  // Hra běží v testu ve sníženém rozlišení (softwarové WebGL je pomalé),
+  // screenshot se ale dělá v plném rozlišení.
   const shot = async (n) => {
+    await page.evaluate(() => window.__debug.setScale(1));
+    await sleep(prof.touch ? 600 : 3500);
     await page.screenshot({ path: `${OUT}/${prof.name}-${n}.png` });
+    await page.evaluate((s) => window.__debug.setScale(s), prof.testScale);
     log('screenshot', n);
   };
+  // softwarové WebGL bez GPU je pomalé (herní čas se při nízkém FPS zpomaluje) => štědré limity
   const waitFor = async (desc, fn, timeout = 30000) => {
+    timeout *= 3;
     const t0 = Date.now();
     while (Date.now() - t0 < timeout) {
       const s = await state();
@@ -90,6 +97,7 @@ for (const prof of PROFILES) {
   try {
     await page.goto(URL);
     await page.waitForFunction(() => !!window.__debug);
+    await page.evaluate((s) => window.__debug.setScale(s), prof.testScale);
     await sleep(1500);
     await shot('01-uvod');
 
@@ -159,16 +167,15 @@ for (const prof of PROFILES) {
     log('úkol 3 OK');
 
     // outro – silueta za oknem
-    await page.waitForFunction(() => window.__game.scene.getObject('silhouette').visible, null, { timeout: 30000 });
-    await page.waitForFunction(() => window.__game.scene.getObject('silhouette').position.x > 0.25, null, { timeout: 10000 });
+    await page.waitForFunction(() => window.__game.scene.getObject('silhouette').visible, null, { timeout: 90000 });
+    await page.waitForFunction(() => window.__game.scene.getObject('silhouette').position.x > 0.25, null, { timeout: 30000 });
     await shot('08-silueta');
-    await page.waitForFunction(() => window.__game.scene.getObject('doorPivot').rotation.y > 0.4, null, { timeout: 30000 });
+    await page.waitForFunction(() => window.__game.scene.getObject('doorPivot').rotation.y > 0.4, null, { timeout: 90000 });
     await shot('09-dvere');
     await waitFor('konec dema', (s) => s.mode === 'ended', 30000);
     await sleep(800);
     await shot('06-konec');
-    const fps = await page.evaluate(() => window.__game.fps.value);
-    log(`DOHRÁNO ✔  (FPS v headless/SwiftShader: ${fps})`);
+    log('DOHRÁNO ✔');
   } catch (e) {
     failures++;
     console.error(`[${prof.name}] CHYBA:`, e.message);
