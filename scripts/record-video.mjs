@@ -16,8 +16,10 @@ const FPS = 30;
 const DT = 1000 / FPS;
 const VIEW = { width: 1280, height: 720 };
 const AUDIO_MAX_S = 260;
+// násobek rozlišení renderu (moderní režim); bez GPU je plné rozlišení pomalé
+const RENDER_SCALE = Number(process.env.VIDEO_SCALE) || 1;
 const OUT = path.resolve(process.argv[2] || 'video/pruchod.mp4');
-const TMP_VIDEO = OUT.replace(/\.mp4$/, '.video.mp4');
+const TMP_VIDEO = OUT.replace(/\.mp4$/, '.video.mkv');
 const TMP_AUDIO = OUT.replace(/\.mp4$/, '.wav');
 mkdirSync(path.dirname(OUT), { recursive: true });
 
@@ -339,10 +341,13 @@ async function walk(points, { speed = 0.72, pitch = deg(-7) } = {}) {
 }
 
 async function use(expectPrompt) {
-  if (S.prompt !== expectPrompt) {
-    await frame();
-    if (S.prompt !== expectPrompt) throw new Error(`čekal jsem výzvu "${expectPrompt}", je "${S.prompt}"`);
+  // když paprsek zrovna trefí něco jiného, zkusíme pohled lehce posunout
+  for (const dp of [0, 0.06, -0.06, 0.12, -0.12]) {
+    if (S.prompt === expectPrompt) break;
+    if (dp) await turnTo(S.yaw, S.pitch + dp, 0.25);
+    else await frame();
   }
+  if (S.prompt !== expectPrompt) throw new Error(`čekal jsem výzvu "${expectPrompt}", je "${S.prompt}"`);
   await page.keyboard.press('KeyE');
   await frame();
 }
@@ -353,6 +358,9 @@ const quiet = (max = 15) => until('ticho', (s) => !s.talking, max);
 try {
   await page.goto(URL);
   for (let i = 0; i < 100 && !(await page.evaluate(() => !!window.__debug && !!window.__vt)); i++) await sleep(100);
+  // modely a textury scény
+  await page.evaluate(() => window.__game.ready);
+  if (RENDER_SCALE !== 1) await page.evaluate((s) => window.__debug.setScale(s), RENDER_SCALE);
   // ambient: hodnotu hlasitosti si pamatujeme sami (OfflineAudioContext ji nevrací zpětně)
   await page.evaluate(() => {
     const a = window.__game.audio;
