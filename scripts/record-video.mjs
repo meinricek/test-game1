@@ -492,3 +492,4 @@ const relevant = errors.filter((e) => !/GPU stall|GL_CLOSE_PATH|Automatic fallba
 if (relevant.length) console.error(`chyby/varování v konzoli:\n  ${relevant.join('\n  ')}`);
 await browser.close();
 server.kill();
+process.exit(process.exitCode ?? 0);
