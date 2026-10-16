@@ -1,0 +1,6 @@
+{
+  "startScene": "bedroom",
+  "scenes": {
+    "bedroom": { "data": "scenes/bedroom.json", "next": null }
+  }
+}

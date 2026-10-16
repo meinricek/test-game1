@@ -1,0 +1,278 @@
+{
+  "id": "bedroom",
+  "name": "Pokoj",
+  "spawn": { "position": [-0.35, 0, 1.15], "yaw": -12, "pitch": -4 },
+
+  "flags": {
+    "lampOn": true,
+    "wardrobeOpen": false,
+    "phoneBuzzed": false,
+    "phoneChecked": false,
+    "lookedOutside": false,
+    "monitorSeen": false,
+    "outro": false
+  },
+
+  "objectives": [
+    { "id": "phone", "text": "Zkontroluj telefon", "doneWhen": { "flag": "phoneChecked" } },
+    { "id": "lamp", "text": "Zhasni lampu", "doneWhen": { "flag": "lampOn", "eq": false } },
+    { "id": "window", "text": "Podívej se z okna", "doneWhen": { "flag": "lookedOutside" } }
+  ],
+
+  "interactables": [
+    { "id": "phone", "prompt": "Zvednout telefon" },
+    {
+      "id": "lamp",
+      "prompts": [
+        { "if": { "flag": "lampOn" }, "text": "Zhasnout lampu" },
+        { "text": "Rozsvítit lampu" }
+      ]
+    },
+    { "id": "window", "prompt": "Podívat se z okna" },
+    {
+      "id": "wardrobe",
+      "prompts": [
+        { "if": { "flag": "wardrobeOpen", "eq": false }, "text": "Otevřít skříň" },
+        { "text": "Zavřít skříň" }
+      ]
+    },
+    { "id": "monitor", "prompt": "Podívat se na monitor" },
+    { "id": "door", "prompt": "Otevřít dveře", "if": { "flag": "outro", "eq": false } }
+  ],
+
+  "devices": {
+    "phone": {
+      "mode": "phone",
+      "title": "Zprávy",
+      "clock": "2:47",
+      "items": [
+        { "sep": "Včera 21:14", "delay": 0.2 },
+        { "from": "Máma", "text": "Jsme s tátou na noční, vrátíme se v 7. Zamkni se a jdi spát.", "delay": 0.2 },
+        { "kind": "me", "text": "jj dobrou", "delay": 0.2 },
+        { "sep": "Dnes 2:41", "delay": 0.5 },
+        { "kind": "unknown", "from": "Neznámé číslo", "text": "ještě nespíš?", "delay": 0.5 },
+        { "kind": "unknown", "from": "Neznámé číslo", "text": "máš rozsvíceno", "delay": 0.7 },
+        { "kind": "unknown", "from": "Neznámé číslo", "text": "vidím tě", "delay": 1.4, "sound": "sting" }
+      ]
+    },
+    "monitor": {
+      "mode": "screen",
+      "title": "CHAT — #parta",
+      "clock": "02:47",
+      "items": [
+        { "text": "[23:58] kuba: jdu spat, zitra pisemka z dejaku", "delay": 0.15 },
+        { "text": "[00:12] terka: dobrou lidi", "delay": 0.15 },
+        { "text": "[01:03] * kuba se odpojil", "delay": 0.15 },
+        { "text": "[01:40] * terka se odpojila", "delay": 0.15 },
+        { "text": "[02:44] * host_0 se připojil", "delay": 0.6 },
+        { "text": "[02:45] host_0: hezký pokoj", "delay": 0.9 },
+        { "text": "[02:46] host_0: ten plakát nad postelí taky", "delay": 0.9 },
+        { "text": "[02:46] * host_0 se odpojil", "delay": 0.9 }
+      ]
+    }
+  },
+
+  "triggers": [
+    {
+      "id": "intro",
+      "on": { "type": "start" },
+      "actions": [
+        { "type": "fade", "to": 1, "duration": 0 },
+        { "type": "ambient", "state": "on", "fade": 4, "wait": false },
+        { "type": "wait", "seconds": 0.6 },
+        { "type": "fade", "to": 0, "duration": 3, "wait": false },
+        { "type": "wait", "seconds": 1.2 },
+        { "type": "monologue", "dialogue": "intro" }
+      ]
+    },
+    {
+      "id": "phoneBuzz",
+      "on": { "type": "timer", "seconds": 8 },
+      "if": { "flag": "phoneChecked", "eq": false },
+      "actions": [
+        { "type": "flag", "name": "phoneBuzzed", "value": true },
+        { "type": "sound", "name": "buzz", "at": "phone" },
+        { "type": "wait", "seconds": 1 },
+        { "type": "objective", "next": true },
+        { "type": "monologue", "dialogue": "phone_buzz" }
+      ]
+    },
+    {
+      "id": "phoneBuzzSkipped",
+      "on": { "type": "timer", "seconds": 8 },
+      "if": { "flag": "phoneChecked" },
+      "actions": [{ "type": "objective", "next": true }]
+    },
+
+    {
+      "id": "usePhone",
+      "on": { "type": "interact", "target": "phone" },
+      "actions": [
+        { "type": "flag", "name": "phoneBuzzed", "value": true },
+        { "type": "device", "id": "phone" },
+        { "type": "flag", "name": "phoneChecked", "value": true }
+      ]
+    },
+    {
+      "id": "afterPhone",
+      "on": { "type": "flag", "flag": "phoneChecked", "eq": true },
+      "actions": [
+        { "type": "wait", "seconds": 0.4 },
+        { "type": "monologue", "dialogue": "after_phone" }
+      ]
+    },
+
+    {
+      "id": "lampOff",
+      "on": { "type": "interact", "target": "lamp" },
+      "if": { "flag": "lampOn" },
+      "actions": [
+        { "type": "sound", "name": "click", "at": "lamp" },
+        { "type": "light", "target": "lampLight", "on": false },
+        { "type": "flag", "name": "lampOn", "value": false }
+      ]
+    },
+    {
+      "id": "lampOn",
+      "on": { "type": "interact", "target": "lamp" },
+      "if": { "flag": "lampOn", "eq": false },
+      "actions": [
+        { "type": "sound", "name": "click", "at": "lamp" },
+        { "type": "light", "target": "lampLight", "on": true },
+        { "type": "flag", "name": "lampOn", "value": true },
+        { "type": "monologue", "dialogue": "lamp_on_again", "if": { "objectiveDone": "lamp" } }
+      ]
+    },
+    {
+      "id": "lampOffFirst",
+      "on": { "type": "flag", "flag": "lampOn", "eq": false },
+      "actions": [
+        { "type": "wait", "seconds": 0.6 },
+        { "type": "monologue", "dialogue": "lamp_off_first" }
+      ]
+    },
+
+    {
+      "id": "windowEarly",
+      "on": { "type": "interact", "target": "window" },
+      "if": [{ "not": { "objectiveActive": "window" } }, { "not": { "objectiveDone": "window" } }],
+      "actions": [
+        { "type": "sound", "name": "whoosh", "volume": 0.4 },
+        { "type": "focusCamera", "anchor": "windowView", "look": "windowLook", "duration": 1.1, "hold": 1.2, "fov": 58,
+          "during": [{ "type": "monologue", "dialogue": "window_early" }] }
+      ]
+    },
+    {
+      "id": "windowFirst",
+      "on": { "type": "interact", "target": "window" },
+      "if": { "objectiveActive": "window" },
+      "actions": [
+        { "type": "sound", "name": "whoosh", "volume": 0.4 },
+        { "type": "focusCamera", "anchor": "windowView", "look": "windowLook", "duration": 1.2, "hold": 1.5, "fov": 55,
+          "during": [{ "type": "monologue", "dialogue": "window_first" }] },
+        { "type": "flag", "name": "lookedOutside", "value": true }
+      ]
+    },
+    {
+      "id": "windowAgain",
+      "on": { "type": "interact", "target": "window" },
+      "if": [{ "objectiveDone": "window" }, { "flag": "outro", "eq": false }],
+      "actions": [
+        { "type": "focusCamera", "anchor": "windowView", "look": "windowLook", "duration": 1, "hold": 1, "fov": 58,
+          "during": [{ "type": "monologue", "dialogue": "window_again" }] }
+      ]
+    },
+
+    {
+      "id": "wardrobeOpen",
+      "on": { "type": "interact", "target": "wardrobe" },
+      "if": { "flag": "wardrobeOpen", "eq": false },
+      "actions": [
+        { "type": "flag", "name": "wardrobeOpen", "value": true },
+        { "type": "sound", "name": "wardrobe", "at": "wardrobe", "volume": 0.6 },
+        { "type": "animate", "target": "wardrobeDoorL", "rotation": [0, 105, 0], "duration": 1.1, "wait": false },
+        { "type": "animate", "target": "wardrobeDoorR", "rotation": [0, -100, 0], "duration": 1.2 }
+      ]
+    },
+    {
+      "id": "wardrobeClose",
+      "on": { "type": "interact", "target": "wardrobe" },
+      "if": { "flag": "wardrobeOpen" },
+      "actions": [
+        { "type": "sound", "name": "wardrobe", "at": "wardrobe", "volume": 0.4 },
+        { "type": "animate", "target": "wardrobeDoorL", "rotation": [0, 0, 0], "duration": 0.9, "wait": false },
+        { "type": "animate", "target": "wardrobeDoorR", "rotation": [0, 0, 0], "duration": 0.9 },
+        { "type": "sound", "name": "thud", "at": "wardrobe", "volume": 0.4 },
+        { "type": "flag", "name": "wardrobeOpen", "value": false }
+      ]
+    },
+    {
+      "id": "wardrobeFirst",
+      "on": { "type": "flag", "flag": "wardrobeOpen", "eq": true },
+      "actions": [
+        { "type": "wait", "seconds": 1 },
+        { "type": "monologue", "dialogue": "wardrobe_first" }
+      ]
+    },
+
+    {
+      "id": "useMonitor",
+      "on": { "type": "interact", "target": "monitor" },
+      "actions": [
+        { "type": "device", "id": "monitor" },
+        { "type": "monologue", "dialogue": "monitor_after", "if": { "flag": "monitorSeen", "eq": false } },
+        { "type": "flag", "name": "monitorSeen", "value": true }
+      ]
+    },
+
+    {
+      "id": "doorLocked",
+      "on": { "type": "interact", "target": "door" },
+      "actions": [
+        { "type": "sound", "name": "locked", "at": "door" },
+        { "type": "monologue", "dialogue": "door_locked" }
+      ]
+    },
+
+    {
+      "id": "posterLook",
+      "on": { "type": "lookAt", "target": "poster", "angle": 10, "distance": 3, "seconds": 1.2 },
+      "actions": [{ "type": "monologue", "dialogue": "poster_look" }]
+    },
+
+    {
+      "id": "outro",
+      "on": { "type": "allObjectivesComplete" },
+      "actions": [
+        { "type": "flag", "name": "outro", "value": true },
+        { "type": "wait", "seconds": 1.2 },
+        { "type": "ambient", "state": "off", "fade": 3 },
+        { "type": "wait", "seconds": 3.5 },
+        { "type": "lockPlayer" },
+        { "type": "sound", "name": "knock", "at": "door" },
+        { "type": "shake", "intensity": 0.012, "duration": 0.9, "wait": false },
+        { "type": "wait", "seconds": 0.6 },
+        { "type": "lookAt", "target": "door", "duration": 1.1 },
+        { "type": "monologue", "dialogue": "knock_react" },
+        { "type": "lookAt", "target": "window", "duration": 1.2 },
+        { "type": "visible", "target": "silhouette", "value": true },
+        { "type": "sound", "name": "sting", "volume": 0.9 },
+        { "type": "animate", "target": "silhouette", "position": [5.5, -0.3, -3.6], "duration": 5, "ease": "linear" },
+        { "type": "visible", "target": "silhouette", "value": false },
+        { "type": "wait", "seconds": 0.6 },
+        { "type": "monologue", "dialogue": "who_is_there", "wait": false },
+        { "type": "wait", "seconds": 1.6 },
+        { "type": "lookAt", "target": "door", "duration": 1.4 },
+        { "type": "sound", "name": "creak", "at": "door" },
+        { "type": "light", "target": "hallLight", "on": true, "flicker": 0.7, "wait": false },
+        { "type": "collider", "target": "door", "enabled": false },
+        { "type": "animate", "target": "doorPivot", "rotation": [0, 34, 0], "duration": 2.6, "ease": "out" },
+        { "type": "sound", "name": "heartbeat", "volume": 0.8 },
+        { "type": "wait", "seconds": 1.6 },
+        { "type": "fade", "to": 1, "duration": 3 },
+        { "type": "ambient", "state": "off", "fade": 0.5 },
+        { "type": "end", "text": "Konec dema", "sub": "Pokračování příště." }
+      ]
+    }
+  ]
+}

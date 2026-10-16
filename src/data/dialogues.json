@@ -1,0 +1,52 @@
+{
+  "intro": [
+    { "text": "Tři ráno. Naši mají zase noční a já tu sedím sám.", "hold": 2.2 },
+    { "text": "Měl bych aspoň zkusit spát..." }
+  ],
+  "phone_buzz": [
+    { "text": "Kdo mi píše takhle pozdě?" }
+  ],
+  "after_phone": [
+    { "text": "„Vidím tě“...? To je nějakej blbej vtip." },
+    { "text": "Jestli mě fakt někdo sleduje, tak mě vidí kvůli tý lampě." }
+  ],
+  "lamp_off_first": [
+    { "text": "Tma. Teď mě aspoň nikdo nevidí... a já nevidím nic.", "hold": 2 },
+    { "text": "(Baterku rozsvítíš klávesou F.)", "textTouch": "(Baterku rozsvítíš tlačítkem Baterka.)", "hold": 2.6 }
+  ],
+  "lamp_on_again": [
+    { "text": "Ne. Radši zase zhasnu." }
+  ],
+  "window_early": [
+    { "text": "Venku je úplně mrtvo. Ani auto." }
+  ],
+  "window_first": [
+    { "text": "Nic. Jen ulice a ta stará lampa." },
+    { "text": "Kdo by tam taky stál, ve tři ráno." }
+  ],
+  "window_again": [
+    { "text": "Pořád nic." }
+  ],
+  "wardrobe_first": [
+    { "text": "Jen oblečení. Co jsem čekal?" }
+  ],
+  "monitor_after": [
+    { "text": "Kdo je „host_0“? Kuba to není. Kuba spí od deseti." }
+  ],
+  "door_locked": [
+    { "text": "Zamčeno. Zamykal jsem se, když jsem šel spát." },
+    { "text": "A klíč je... někde. Stejně tam teď nechci." }
+  ],
+  "door_after_end": [
+    { "text": "Nechoď tam." }
+  ],
+  "poster_look": [
+    { "text": "Sivý les. Na ten koncert jsme nakonec nejeli." }
+  ],
+  "knock_react": [
+    { "text": "..." }
+  ],
+  "who_is_there": [
+    { "text": "...kdo je tam?", "hold": 2.4 }
+  ]
+}
